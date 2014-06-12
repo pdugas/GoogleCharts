@@ -43,7 +43,11 @@ class GoogleCharts
                                           "&lt;chart/&gt;)''");
       }
 
-      if (!$parser->getOutput()->getExtensionData('extGoogleCharts_count')) {
+      $count = $parser->getOutput()->getExtensionData('extGoogleCharts_count');
+      $count = ($count ? $count+1 : 1);
+      $parser->getOutput()->setExtensionData('extGoogleCharts_count', $count);
+
+      if ($count == 1) {
         $script = <<<ENDSCRIPT
 <script type='text/javascript' src='https://www.google.com/jsapi'></script>
 ENDSCRIPT;
@@ -104,7 +108,7 @@ ENDSCRIPT;
     var data = google.visualization.arrayToDataTable([$data]);
     var options = $options;
     var div = document.getElementById('extGoogleCharts_chart$count');
-    var chart = new google.visualization.Gauge(div);
+    var chart = new google.visualization.$type(div);
     chart.draw(data, options);
   });
 </script>
