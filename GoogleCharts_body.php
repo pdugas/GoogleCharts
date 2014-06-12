@@ -85,10 +85,8 @@ ENDSCRIPT;
       } 
 
       // $args become the options
-      $options = '';
+      $options = array();
       foreach ($args as $key => $val) {
-        if ($options) { $options .= ","; } 
-
         // XXX Gah!  MediaWiki is lower-casing the arguments so we can't
         // use them directly as the options.  For a quick hack, we replace
         // underscore and the letter that follows it with the uppercase of
@@ -96,14 +94,9 @@ ENDSCRIPT;
         $key = preg_replace_callback('/_(.)/', 
                                      function ($m) {return strtoupper($m[1]);},
                                      $key);
-
-        if (is_numeric($val)) {
-	  $options .= "$key:$val";
-        } else {
-	  $options .= "$key:'$val'";
-        }
+        $options[$key] = $val;
       }
-      $options = '{'.$options.'}';
+      $options = json_encode($options);
 
       $script = <<<ENDSCRIPT
 <script type='text/javascript'>
