@@ -1,4 +1,6 @@
 GoogleCharts
 ============
 
-MediaWiki extension to insert Google Charts into pages
+MediaWiki extension to insert Google Charts into wiki pages
+
+(work in progress)
