@@ -33,8 +33,6 @@ class GoogleCharts
   static function chartRender($input, array $args, 
                               Parser $parser, PPFrame $frame)
     {
-      global $wgOut;
-
       if (array_key_exists('type', $args)) {
         $type = ucfirst($args['type']);
         unset($args['type']);
@@ -51,22 +49,21 @@ class GoogleCharts
         $script = <<<ENDSCRIPT
 <script type='text/javascript' src='https://www.google.com/jsapi'></script>
 ENDSCRIPT;
-        $wgOut->addScript($script);
+        $parser->getOutput()->addHeadItem($script);
         $script = <<<ENDSCRIPT
 <script type='text/javascript'>
   extGoogleCharts = [];
-  function extGoogleCharts_drawCharts() {
-    var numCharts = extGoogleCharts.length;
-    for (var i = 0; i != numCharts; ++i) {
-      extGoogleCharts[i]();
-    }
-  }
   google.load('visualization', '1.0',
               {'packages':['corechart','gauge'],
-               'callback':extGoogleCharts_drawCharts});
+               'callback':function () {
+                   var num = extGoogleCharts.length;
+                   for (var i = 0; i != num; ++i) {
+                     extGoogleCharts[i]();
+                   }
+               }});
 </script>
 ENDSCRIPT;
-        $wgOut->addScript($script);
+        $parser->getOutput()->addHeadItem($script);
         $parser->getOutput()->setExtensionData('extGoogleCharts_count', TRUE);
       }
 
@@ -107,15 +104,15 @@ ENDSCRIPT;
   extGoogleCharts.push(function() {
     var data = google.visualization.arrayToDataTable([$data]);
     var options = $options;
-    var div = document.getElementById('extGoogleCharts_chart$count');
+    var div = document.getElementById('extGoogleCharts_$count');
     var chart = new google.visualization.$type(div);
     chart.draw(data, options);
   });
 </script>
 ENDSCRIPT;
-      $wgOut->addScript($script);
+      $parser->getOutput()->addHeadItem($script);
   
-      return "<div id=\"extGoogleCharts_chart$count\"></div>";
+      return "<div id=\"extGoogleCharts_$count\"></div>";
     } // function chartRender()
 
 } // class GoogleCharts
