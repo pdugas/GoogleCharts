@@ -13,6 +13,16 @@ Speed,55
 Pressure,95
 </chart>
 ```
+Or a pie chart like so:
+```
+<chart type="PieChart" title="Devices by State">
+State,Devices in State
+DOWN,9
+CRITICAL,10
+WARNING,23
+OK,345
+</chart>
+```
 
 See https://developers.google.com/chart/
 
