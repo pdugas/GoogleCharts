@@ -33,6 +33,8 @@ class GoogleCharts
   static function chartRender($input, array $args, 
                               Parser $parser, PPFrame $frame)
     {
+      global $wgArticlePath;
+
       if (array_key_exists('type', $args)) {
         $type = ucfirst($args['type']);
         unset($args['type']);
@@ -48,28 +50,66 @@ class GoogleCharts
       if ($count == 1) {
         $script = "<script type='text/javascript' src='https://www.google.com/jsapi'></script>";
         $parser->getOutput()->addHeadItem($script);
-        $script = "<script type='text/javascript'> extGoogleCharts = [];google.load('visualization', '1.0', {'packages':['corechart','gauge'], 'callback':function () { var num = extGoogleCharts.length; for (var i = 0; i != num; ++i) { extGoogleCharts[i](); } }});</script>";
+        $script = "<script type='text/javascript'>extGoogleCharts = []; ".
+                  "google.load('visualization', '1.0', {'packages':['corechart','gauge'], ".
+                  "'callback':function () { var num = extGoogleCharts.length; for (var i = ".
+                  "0; i != num; ++i) { extGoogleCharts[i](); } }});</script>";
         $parser->getOutput()->addHeadItem($script);
         $parser->getOutput()->setExtensionData('extGoogleCharts_count', TRUE);
       }
 
-      // $input is expected to be CSV data
-      $data = '';
-      foreach(preg_split("/((\r?\n)|(\r\n?))/", $input) as $line){
-        if ($line) {
-          if ($data) { $data .= ",["; } else { $data = "["; }
-          $first = true;
-          foreach(str_getcsv($line) as $col) {
-            if ($first) { $first = false; } else { $data .= ","; }
-            if (is_numeric($col)) {
-              $data .= $col;
-            } else {
-              $data .= "'$col'";
+      // $input is expected to be JSON or CSV data
+      $linkCol = 'null';
+      $data = json_decode(str_replace("\n", '', $input));
+      if (json_last_error() == JSON_ERROR_NONE) {
+        if (property_exists($data, 'cols') && is_array($data->cols)) {
+          $colNum = 0;
+          foreach ($data->cols as $col) {
+            if (property_exists($col, 'id') && is_string($col->id) && strtolower($col->id) == 'link') {
+              $linkCol = $colNum; 
+              if (property_exists($data, 'rows') && is_array($data->rows)) {
+                foreach ($data->rows as &$row) {
+                  $row->c[$linkCol]->v = str_replace('$1',$row->c[$linkCol]->v, $wgArticlePath);
+                } unset($row);
+              }
+              break;
             }
+            ++$colNum;
           }
-          $data .= "]";
         }
-      } 
+        $data = json_encode($data);
+        $data = "new google.visualization.DataTable($data)";
+      } else {
+        $data = '';
+        $firstRow = true;
+        foreach (preg_split("/\R/s", $input) as $line){
+          if ($line) {
+            if ($firstRow) { 
+              $firstRow = false;
+              $colNum = 0;
+              foreach (str_getcsv($line) as $col) {
+                if (strtolower($col) == 'link') { $linkCol = $colNum; break; }
+                ++$colNum;
+              }
+            } else { $data .= ","; }
+            $data .= "[";
+            $colNum = 0;
+            foreach (str_getcsv($line) as $col) {
+              if ($colNum) { $data .= ","; }
+              if (is_numeric($col)) {
+                $data .= $col;
+              } elseif (is_int($linkCol) && $linkCol == $colNum)  {
+                $data .= "'".str_replace('$1',$col, $wgArticlePath)."'";
+              } else {
+                $data .= "'".addslashes($col)."'";
+              }
+              ++$colNum;
+            }
+            $data .= "]";
+          }
+        } 
+        $data = "google.visualization.arrayToDataTable([$data])";
+      }
 
       // $args become the options
       $options = array();
@@ -89,7 +129,13 @@ class GoogleCharts
       }
       $options = json_encode($options);
 
-      $script = "<script type='text/javascript'>extGoogleCharts.push(function() { var data = google.visualization.arrayToDataTable([$data]); var options = $options; var chart = new google.visualization.$type(document.getElementById('extGoogleCharts_$count')); chart.draw(data, options); google.visualization.events.addListener(chart, 'select', function(e) { var item = chart.getSelection()[0]; if (item) { window.location.replace(data.getValue(item.row, 2)); } }); });</script>";
+      $script = "<script type='text/javascript'>extGoogleCharts.push(function() ".
+      "{ var data = $data; var options = $options; var chart = new ".
+      "google.visualization.$type(document.getElementById('extGoogleCharts_$count')); ".
+      "chart.draw(data, options); google.visualization.events.addListener(chart, ".
+      "'select', function(e) { var col = $linkCol; if (col == null) { return; } ".
+      "var item = chart.getSelection()[0]; if (item) { ".
+      "window.location.replace(data.getValue(item.row, col)); } } ); });</script>";
   
       return "<div id=\"extGoogleCharts_$count\"></div>$script";
     } // function chartRender()
