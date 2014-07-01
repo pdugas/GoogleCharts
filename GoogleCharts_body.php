@@ -46,23 +46,9 @@ class GoogleCharts
       $parser->getOutput()->setExtensionData('extGoogleCharts_count', $count);
 
       if ($count == 1) {
-        $script = <<<ENDSCRIPT
-<script type='text/javascript' src='https://www.google.com/jsapi'></script>
-ENDSCRIPT;
+        $script = "<script type='text/javascript' src='https://www.google.com/jsapi'></script>";
         $parser->getOutput()->addHeadItem($script);
-        $script = <<<ENDSCRIPT
-<script type='text/javascript'>
-  extGoogleCharts = [];
-  google.load('visualization', '1.0',
-              {'packages':['corechart','gauge'],
-               'callback':function () {
-                   var num = extGoogleCharts.length;
-                   for (var i = 0; i != num; ++i) {
-                     extGoogleCharts[i]();
-                   }
-               }});
-</script>
-ENDSCRIPT;
+        $script = "<script type='text/javascript'> extGoogleCharts = [];google.load('visualization', '1.0', {'packages':['corechart','gauge'], 'callback':function () { var num = extGoogleCharts.length; for (var i = 0; i != num; ++i) { extGoogleCharts[i](); } }});</script>";
         $parser->getOutput()->addHeadItem($script);
         $parser->getOutput()->setExtensionData('extGoogleCharts_count', TRUE);
       }
@@ -103,28 +89,9 @@ ENDSCRIPT;
       }
       $options = json_encode($options);
 
-      $script = <<<ENDSCRIPT
-<script type='text/javascript'>
-  extGoogleCharts.push(function() {
-    var data = google.visualization.arrayToDataTable([$data]);
-    var options = $options;
-    var div = document.getElementById('extGoogleCharts_$count');
-    if (div != null) {
-      var chart = new google.visualization.$type(div);
-      chart.draw(data, options);
-      google.visualization.events.addListener(chart, 'select', function(e) {
-        var item = chart.getSelection()[0];
-        if (item) { window.location.replace(data.getValue(item.row, 2)); }
-      });
-    } else {
-     console.log("getElementById('extGoogleCharts_$count') returned NULL!");
-    }
-  });
-</script>
-ENDSCRIPT;
-      $parser->getOutput()->addHeadItem($script);
+      $script = "<script type='text/javascript'>extGoogleCharts.push(function() { var data = google.visualization.arrayToDataTable([$data]); var options = $options; var chart = new google.visualization.$type(document.getElementById('extGoogleCharts_$count')); chart.draw(data, options); google.visualization.events.addListener(chart, 'select', function(e) { var item = chart.getSelection()[0]; if (item) { window.location.replace(data.getValue(item.row, 2)); } }); });</script>";
   
-      return "<div id=\"extGoogleCharts_$count\"></div>";
+      return "<div id=\"extGoogleCharts_$count\"></div>$script";
     } // function chartRender()
 
 } // class GoogleCharts
