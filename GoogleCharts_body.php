@@ -95,7 +95,11 @@ ENDSCRIPT;
         $key = preg_replace_callback('/_(.)/', 
                                      function ($m) {return strtoupper($m[1]);},
                                      $key);
-        $options[$key] = $val;
+        // If the value is JSON code, we use that, otherwise, we pass the value
+        // directly.
+        $val = html_entity_decode($val);
+        $json = json_decode($val);
+        $options[$key] = (json_last_error() == JSON_ERROR_NONE ? $json : $val);
       }
       $options = json_encode($options);
 
@@ -105,8 +109,16 @@ ENDSCRIPT;
     var data = google.visualization.arrayToDataTable([$data]);
     var options = $options;
     var div = document.getElementById('extGoogleCharts_$count');
-    var chart = new google.visualization.$type(div);
-    chart.draw(data, options);
+    if (div != null) {
+      var chart = new google.visualization.$type(div);
+      chart.draw(data, options);
+      google.visualization.events.addListener(chart, 'select', function(e) {
+        var item = chart.getSelection()[0];
+        if (item) { window.location.replace(data.getValue(item.row, 2)); }
+      });
+    } else {
+     console.log("getElementById('extGoogleCharts_$count') returned NULL!");
+    }
   });
 </script>
 ENDSCRIPT;
